@@ -1,4 +1,4 @@
-## STOCKX CODING CHALLENGE
+## DCR CODING CHALLENGE
 
 ### Instruction:
 Please run the follow command lines in terminal before proceeding:
