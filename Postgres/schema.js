@@ -1,4 +1,5 @@
-const { pool } = require('./index.js');
+const { pool, pgQuery } = require('./index.js');
+const bcrypt = require('bcryptjs')
 
 const schemaQuery = `
   CREATE SCHEMA IF NOT EXISTS dcr;
@@ -37,6 +38,16 @@ const createAccountIndexQuery = `
   ( account_id ASC )
 `
 
+//create a fake user:
+const createFakeUser = async ()=> {
+  const query = 'INSERT INTO dcr.users(username, password) VALUES($1, $2) RETURNING *'
+  const password = bcrypt.hashSync('password', 10);
+  const values = ['huy', password]
+  await pgQuery(query,values, (data)=> {
+    console.log('Admin User Created In Postgres: ', data.rows)
+  })
+}
+
 const connect = async ()=> {
   try{
     let client = await pool.connect();
@@ -45,7 +56,8 @@ const connect = async ()=> {
     await client.query(createAccountIndexQuery);
     await client.query(createUserTableQuery);
     await client.query(createUserIndexQuery);
-    await client.release();
+    await client.release(); 
+    await createFakeUser();
   }
   catch(err){
     pool.end();

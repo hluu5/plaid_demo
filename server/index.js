@@ -7,7 +7,7 @@ const cors = require('cors');
 const path = require('path');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
-
+const { checkPasswordMiddleware } = require('./middleware.js')
 dotenv.config();
 
 const PORT = 8000;
@@ -29,13 +29,14 @@ app.get('/', (req, res) => {
 	res.sendFile(path.join(__dirname + '/index.html'));
 })
 
-const fake_username = 'huy';
-const fake_password = 'password';
+// const fake_username = 'huy';
+// const fake_password = 'password';
 
-
+//Check Password and Username before generate and exchange tokens)
+app.post('/get_access_token', checkPasswordMiddleware) ;
 
 app.post('/get_access_token', (req, res, next) => {
-	console.log('===================>', req.body.accounts)
+	// console.log('===================>', req.body.accounts)
 	PUBLIC_TOKEN = req.body.public_token;
 	client.exchangePublicToken(PUBLIC_TOKEN, (error, tokenResponse) => {
 		if (error != null) {
@@ -44,8 +45,8 @@ app.post('/get_access_token', (req, res, next) => {
 		}
 		ACCESS_TOKEN = tokenResponse.access_token;
 		ITEM_ID = tokenResponse.item_id;
-		console.log('Access Token: ' + ACCESS_TOKEN);
-		console.log('Item ID: ' + ITEM_ID);
+		// console.log('Access Token: ' + ACCESS_TOKEN);
+		// console.log('Item ID: ' + ITEM_ID);
 		res.json({
 			'error': false,
 			access_token: ACCESS_TOKEN,
@@ -53,6 +54,8 @@ app.post('/get_access_token', (req, res, next) => {
 		});
 	});
 });
+
+
 
 app.get('/auth', function (req, res, next) {
 	client.getAuth(ACCESS_TOKEN, (error, authResponse) => {

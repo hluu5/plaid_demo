@@ -13,9 +13,6 @@
 		(function ($) {
 			var handler = Plaid.create({
 				clientName: 'Plaid Testing',
-				// Optional, specify an array of ISO-3166-1 alpha-2 country
-				// codes to initialize Link; European countries will have GDPR
-				// consent panel
 				countryCodes: ['US'],
 				env: 'sandbox',
 				// Replace with your public_key from the Dashboard
@@ -45,6 +42,9 @@
 							accounts: metadata.accounts,
 							institution: metadata.institution,
 							link_session_id: metadata.link_session_id,
+							//send authentication along with the tokens, will be done differently in production.
+							username: 'huy',
+							password: 'password'
 						}),
 					}).then((response) => {
 						return response.json();
