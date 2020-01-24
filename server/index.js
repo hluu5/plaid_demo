@@ -5,6 +5,10 @@ const bodyParser = require('body-parser');
 const plaid = require('plaid');
 const cors = require('cors');
 const path = require('path');
+const dotenv = require('dotenv');
+const bcrypt = require('bcryptjs');
+
+dotenv.config();
 
 const PORT = 8000;
 //Need to store access token in data store (in production)
@@ -12,53 +16,58 @@ let ACCESS_TOKEN = null;
 let PUBLIC_TOKEN = null;
 
 const client = new plaid.Client(
-    '5e29f16ddf1def0017481b4a',
-    '55706847e738c5652b48a260afae9f',
-    '979d466ed2a1244be6c73142f9d581',
-    plaid.environments.sandbox
+	process.env.PLAID_CLIENT_ID,
+	process.env.PLAID_SECRET_SANDBOX,
+	process.env.PLAID_PUBLIC_KEY,
+	plaid.environments.sandbox
 );
 
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
 
-app.get('/', (req, res)=> {
-    res.sendFile(path.join(__dirname + '/index.html'));
+app.get('/', (req, res) => {
+	res.sendFile(path.join(__dirname + '/index.html'));
 })
 
+const fake_username = 'huy';
+const fake_password = 'password';
+
+
+
 app.post('/get_access_token', (req, res, next) => {
-    console.log('===================>', req.body.accounts)
-    PUBLIC_TOKEN = req.body.public_token;
-    client.exchangePublicToken(PUBLIC_TOKEN, (error,tokenResponse) => {
-        if (error != null) {
-            console.log('Could not exchange public_token!' + '\n' + error);
-            return res.json({ error: error.message });
-        }
-        ACCESS_TOKEN = tokenResponse.access_token;
-        ITEM_ID = tokenResponse.item_id;
-        console.log('Access Token: ' + ACCESS_TOKEN);
-        console.log('Item ID: ' + ITEM_ID);
-        res.json({ 
-            'error': false,
-            access_token: ACCESS_TOKEN,
-            item_id: ITEM_ID,
-        });
-    });
+	console.log('===================>', req.body.accounts)
+	PUBLIC_TOKEN = req.body.public_token;
+	client.exchangePublicToken(PUBLIC_TOKEN, (error, tokenResponse) => {
+		if (error != null) {
+			console.log('Could not exchange public_token!' + '\n' + error);
+			return res.json({ error: error.message });
+		}
+		ACCESS_TOKEN = tokenResponse.access_token;
+		ITEM_ID = tokenResponse.item_id;
+		console.log('Access Token: ' + ACCESS_TOKEN);
+		console.log('Item ID: ' + ITEM_ID);
+		res.json({
+			'error': false,
+			access_token: ACCESS_TOKEN,
+			item_id: ITEM_ID,
+		});
+	});
 });
 
-app.get('/auth', function(request, response, next) {
-    client.getAuth(ACCESS_TOKEN, function(error, authResponse) {
-      if (error != null) {
-        console.log(error);
-        return response.json({
-          error: error,
-        });
-      }
-      console.log(authResponse);
-      response.json({error: null, auth: authResponse});
-    });
+app.get('/auth', function (req, res, next) {
+	client.getAuth(ACCESS_TOKEN, (error, authResponse) => {
+		if (error != null) {
+			console.log(error);
+			return res.json({
+				error: error,
+			});
+		}
+		console.log(authResponse);
+		res.json({ error: null, auth: authResponse });
+	});
 });
 
-app.listen(PORT, ()=> console.log(`connected to port ${PORT}`));
+app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
 
 // axios.post('https://dataimport.finpac.com/st/underwrite', {
 //     "referenceId" : '',
