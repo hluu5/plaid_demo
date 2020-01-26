@@ -49,24 +49,24 @@ const getUser = async(username) => {
 }
 
 const retrieveAccountData = (user_id, institutionId, callback) => {
-  const findExistingAccount = "SELECT account_id, user_id, institutionId FROM dcr.accounts WHERE user_id = ($1) AND institutionId = ($2)"
-  pgQuery(findExistingAccount,[user_id, institutionId], (err,res)=> {
-    if (err) console.log(err);
+  const findExistingAccount = "SELECT account_id, user_id, accountId FROM dcr.accounts WHERE user_id = ($1) AND accountId = ($2)"
+  pgQuery(findExistingAccount,[user_id, institutionId], (res)=> {
+    // if (err) console.log(err);
     if (res) callback(res.rows);
   })
 }
 
-const createNewAccount = (user_id, accessToken, itemId, institutionId, institutionName)=> {
-  const query = 'INSERT INTO dcr.accounts(user_id, accessToken, itemId, institutionId, institutionName) VALUES($1, $2, $3, $4, $5) RETURNING *'
+const createNewAccount = async (user_id, accessToken, itemId, institutionId, institutionName)=> {
+  const query = 'INSERT INTO dcr.accounts(user_id, accessToken, itemId, accountId, accountName) VALUES($1, $2, $3, $4, $5) RETURNING *'
   const values = [user_id, accessToken, itemId, institutionId, institutionName]
   //Check if entry already exists
-  retrieveAccountData(user_id, institutionId, (res)=> {
+  await retrieveAccountData(user_id, institutionId, async (res)=> {
     if (res.length > 0) {
       console.error('ERROR: This account already exists')
     }
     if (res.length === 0) {
-      pgQuery(query,values, (err,res) => {
-        if (err) console.log(err)
+      await pgQuery(query,values, async (res) => {
+        console.log(res.row)
       })
     }
   })

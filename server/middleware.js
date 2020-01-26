@@ -11,6 +11,7 @@ module.exports = {
 			} else {
 				const hash = await bcrypt.compare(req.body.password, response.rows[0].password)
 				if (hash === true) {
+					res.locals.user_id = response.rows[0].user_id;
 					await next()
 				}
 				if (hash === false) {

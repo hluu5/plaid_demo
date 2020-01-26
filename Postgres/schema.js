@@ -23,11 +23,11 @@ const createUserIndexQuery = `
 const createAccountTableQuery = `
   CREATE TABLE IF NOT EXISTS accounts(
     account_id SERIAL PRIMARY KEY,
-    user_id VARCHAR (50) UNIQUE NOT NULL,
-    accessToken VARCHAR (50) UNIQUE NOT NULL,
-    itemId VARCHAR (50) UNIQUE NOT NULL,
-    institutionId VARCHAR (50) UNIQUE NOT NULL,
-    institutionName VARCHAR (50) UNIQUE NOT NULL
+    user_id INTEGER NOT NULL,
+    accessToken VARCHAR (150) NOT NULL,
+    itemId VARCHAR (150) NOT NULL,
+    accountId VARCHAR (150) UNIQUE NOT NULL,
+    accountName VARCHAR (150) UNIQUE NOT NULL
   );
 `
 
