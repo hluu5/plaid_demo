@@ -40,7 +40,7 @@ npm run start
 5. Buyer could monitor payment and make payment from our portal. This could only be done in collaboration with lenders. They have to provide us a tool such as APIs to create lendee account, check their lendee accounts balance, check transactions etc. Another option is that buyer will link up their lendee account using Plaid and DCR uses Plaid to monitor and authenticate users' identity, then uses something like Stripe to handle payment. 
 
 ### Questions/Comments:
-1. I like how Plaid has different method to verify identity and link account to different intitutions. Most likely, we want to do instant verification by username and password at that intitution since DCR wants the process to be fast and simple. If the buyer has to go back in a different day to check their qualification, he most likely won't come back.
+1. I like how Plaid has different method to verify identity and link account to different intitutions. Most likely, we want to do instant verification by username and password at that intitution since DCR wants the process to be fast and simple. If the buyer has to go back on a different day to check their qualification, he most likely won't come back.
 
 2. Compare and Contrast Plaid vs Finicity: 
 - Plaid has a prebuilt widget that is easy to use for end user to Link their account. If we don't want to use this, we have to set up our Multi Factor Authentication ourselves. Finicity doesn't have a prebuilt widget like Plaid's.
