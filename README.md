@@ -36,7 +36,7 @@ npm run start
 4. Buyer chose the term and rate that he/she wants, clicks on it, and we make another request to the lender to submit our final application. At this point, I assume the buyer already satisfied most of the criteria and is pre-approved.
     This is done using POST request to '/submitApplication' API.
 
-#### For consideration(?):
+#### For future consideration(?):
 5. Buyer could monitor payment and make payment from our portal. This could only be done in collaboration with lenders. They have to provide us a tool such as APIs to create lendee account, check their lendee accounts balance, check transactions etc. Another option is that buyer will link up their lendee account using Plaid and DCR uses Plaid to monitor and authenticate users' identity, then uses something like Stripe to handle payment. 
 
 ### Questions/Comments:
