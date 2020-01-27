@@ -90,10 +90,6 @@ app.post('/income', (req, res, next) => {
 	})
 })
 
-app.post('/test', (req, res) => {
-	console.log(req)
-})
-
 app.post('/assetReport', (req, res, next) => {
 	const daysRequested = 10;
 

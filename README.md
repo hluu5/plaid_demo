@@ -24,7 +24,7 @@ npm run start
 
 => please go to localhost:8000 to check it out
 ```
-### App Flow:
+### App Flow: Please go to root folder, checkout 'testing.js' file for example of API calls.
 1. Buyers log in DCR portal and link their accounts using using Plaid's Link Item system. If this is the first time buyers do this, then information from this Item sets and accounts will be saved to our database. This is done using the Plaid Link's button and send post request to our '/get_access_token' api.
 
 2. After the buyer linked the items account. We will extract income and asset reports from Items sets. Note I couldn't get a working Asset Report because we need to provide a webhook for async creation of asset report. This is can only be done if our server was live with exposed ip address. 
