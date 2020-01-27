@@ -8,7 +8,7 @@ const path = require('path');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 const { checkPasswordMiddleware } = require('./middleware.js');
-const { createNewAccount } = require('../Postgres/index.js')
+const { createNewAccount, createNewItem, retrieveItemData } = require('../Postgres/index.js')
 dotenv.config();
 
 const PORT = 8000;
@@ -34,7 +34,7 @@ app.get('/', (req, res) => {
 // const fake_password = 'password';
 
 //Check Password and Username before generate and exchange tokens)
-app.post('/get_access_token', checkPasswordMiddleware) ;
+app.post('/get_access_token', checkPasswordMiddleware);
 
 app.post('/get_access_token', async (req, res, next) => {
 	// console.log('===================>', req.body.accounts)
@@ -54,18 +54,16 @@ app.post('/get_access_token', async (req, res, next) => {
 			item_id: ITEM_ID,
 		});
 
+		//save items into db after linking item:
+		await createNewItem(res.locals.user_id, ACCESS_TOKEN, ITEM_ID)
+		//save accounts into db after linking account for the first time.
 		await req.body.accounts.map(async (e) => {
-			// console.log(e)
-			await createNewAccount(res.locals.user_id, ACCESS_TOKEN, ITEM_ID, e.id, e.name)
+			await createNewAccount(res.locals.user_id, e.id, e.name)
 		})
 	});
-	// console.log(res.locals.user_id)
-	
 });
 
-// app.post('/createAccount',  async (req, res, next) => {
-// 	await createNewAccount(req.body.user_id, req.body.accessToken, req.body.itemId, req.body.institutionId, req.body.institutionName)
-// })
+
 
 app.post('/auth', function (req, res, next) {
 	console.log(req.body.access_token)
@@ -81,241 +79,178 @@ app.post('/auth', function (req, res, next) {
 	});
 });
 
+app.post('/income', (req, res, next) => {
+	retrieveItemData(req.body.user_id, req.body.itemId, (data) => {
+		console.log(data[0]);
+		client.getIncome(data[0].access_token, (err, result) => {
+			if (err) console.log(err)
+			var income = result.income;
+			res.json(income)
+		});
+	})
+})
+
+app.post('/test', (req, res) => {
+	console.log(req)
+})
+
+app.post('/assetReport', (req, res, next) => {
+	const daysRequested = 10;
+
+	// ACCESS_TOKENS is an array of Item access tokens.
+	// Note that the assets product must be enabled for all Items.
+	// All fields on the options object are optional.
+	const ACCESS_TOKENS = ['access-sandbox-1ebd7b9a-b842-4fe4-add6-c9c0b800a5d6', 'access-sandbox-5a14d090-9aea-41ce-9025-f2aa218a8e0f'];
+	client.createAssetReport(ACCESS_TOKENS, daysRequested,
+		(error, createResponse) => {
+			if (error != null) {
+				console.log(error)
+			}
+
+			const assetReportId = createResponse.asset_report_id;
+			const assetReportToken = createResponse.asset_report_token;
+			//console.log(assetReportToken)
+			client.getAssetReport(assetReportToken, false, (error, getResponse) => {
+				if (error != null) {
+					if (error.status_code === 400 &&
+						error.error_code === 'PRODUCT_NOT_READY') {
+						// Asset report is not ready yet. Try again later.
+						console.log(error)
+					} else {
+						// Handle error.
+						console.log(error)
+					}
+				}
+
+				// const report = getResponse.report;
+				console.log(getResponse)
+			});
+		});
+})
+
+app.post('/checkApplication', (req, res) => {
+	// Asume we checked the buyer's income, assets, and accounts and they passed certain threshold that was
+	// set up by both DCR and the lenders. We will send a request to FinPac to check what term and amount
+	// the buyer can be qualified for.
+
+	axios.post('https://dataimport.finpac.com/st/prequal', {
+		"referenceId": req.body.referenceId,
+		"dealer": {
+			"username": req.body.dealer.username,
+			"password": req.body.dealer.password,
+			"systemId": req.body.dealer.systemId,
+			"contactName": req.body.dealer.contactName,
+			"contactPhone": req.body.dealer.contactPhone,
+			"contactEmail": [req.body.dealer.contactEmail],
+			"subBrokerName": '',
+			"splitTransaction": "NO",
+			"attachments": "NO",
+			"comments": ''
+		},
+
+		"customer": {
+			"customerName": req.body.customer.customerName,
+			"dba": req.body.customer.dba,
+			"fedId": req.body.customer.fedId,
+			"address1": req.body.customer.address1,
+			"address2": "",
+			"city": req.body.customer.city,
+			"state":req.body.customer.state,
+			"zip": req.body.customer.zip,
+			"billingAddress1": req.body.customer.billingAddress1,
+			"billingAddress2": "",
+			"billingCity": req.body.customer.billingCity,
+			"billingState": req.body.customer.billingState,
+			"billingZip": req.body.customer.billingZip,
+			"contactName": req.body.customer.contactName,
+			"contactPhone": req.body.customer.contactPhone,
+			"contactFax": req.body.customer.contactFax,
+			"contactEmail": req.body.customer.contactEmail,
+			"typeOfBusiness": req.body.customer.typeOfBusiness,
+			"homeBasedBusiness": "YES",
+			"businessDescription": "",
+			"businessWebsite": "",
+			"tibYears": req.body.customer.tibYears,
+			"verificationMethod": req.body.customer.verificationMethod,
+			"verificationMethodComment": "",
+			"sic": req.body.customer.sic
+		},
+
+		"guarantors": [
+			{
+				"firstName": req.body.guarantors[0].firstName,
+				"lastName": req.body.guarantors[0].lastName,
+				"fedId": req.body.guarantors[0].fedId,
+				"title": "",
+				"percentOwnership": 100,
+				"address1": "100 Musicians Way",
+				"address2": "",
+				"city": "Beverly Hills",
+				"state": "CA",
+				"zip": "90210",
+				"homePhone": "2123331256",
+				"cellPhone": "",
+				"contactEmail": ""
+			}
+		],
+
+		"ownership": {
+			"comments": "if sum of guarantor percent ownership less than 100%, pleaseexplain"
+		},
+
+		"terms": {
+			"requestedAmount": req.body.terms.requestedAmount,
+			"residual": req.body.terms.residual,
+			"programCode": ""
+		},
+
+		"equipmentList": [
+			{
+				"condition": "REFURBISHED",
+				"typeOfTransaction": "VENDOR_SALE",
+				"equipCode": "009.012",
+				"equipDescription": "Some equipment",
+				"equipAddress": "",
+				"equipCity": "",
+				"equipState": "CA",
+				"equipZip": "90210",
+				"vendorName": "",
+				"vendorAddress": "",
+				"vendorCity": "",
+				"vendorState": "CA",
+				"vendorZip": "90210"
+			}
+		]
+	})
+	.then(function (response) {
+		res.json(response.data);
+	})
+	.catch(function (error) {
+		console.log(error);
+	});
+})
+
+app.post('/submitApplication', (req,res) => {
+	// Assume the buyer chose the term he wanted and DCR proceed to submit the final application to lender (FinPac).
+	axios.post("https://dataimport.finpac.com/st/push-prequal", {
+		"dealer": {
+			"username": req.body.dealer.username,
+			"password": req.body.dealer.password,
+			"systemId": req.body.dealer.systemId,
+		},
+		"application": {
+			"submissionId":  req.body.application.submissionId,
+			"contractTerm":  req.body.application.contractTerm
+		}
+	})
+	.then(function (response) {
+		res.json(response.data);
+	})
+	.catch(function (error) {
+		console.log(error);
+	});
+})
+
 app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
 
-// axios.post('https://dataimport.finpac.com/st/underwrite', {
-//     "referenceId" : '',
-//     "dealer": {
-//         "username" : "gecap",
-//         "password" : "Johncarp751",
-//         "systemId" : "010841.0010",
-//         "contactName" : "DCR",
-//         "contactPhone" : "2532223333",
-//         "contactEmail" : ["person1@finpac.com", "person2@finpac.com"],
-//         "subBrokerName" : 'null',
-//         "splitTransaction" : "NO",
-//         "attachments" : "NO",
-//         "comments" : ''
-//     },
 
-//     "customer": {
-//         "customerName" : "Goofy",
-//         "dba" : "Goofy's Barn Stormer",
-//         "fedId" : "",
-//         "address1" : "1234 Somewhere Street",
-//         "address2" : "",
-//         "city" : "Nowhere",
-//         "state" : "CA",
-//         "zip" : "12345",
-//         "billingAddress1" : "1234 Somewhere Street",
-//         "billingAddress2" : "",
-//         "billingCity" : "Nowhere",
-//         "billingState" : "CA",
-//         "billingZip" : "12345",
-//         "contactName" : "Goofy",
-//         "contactPhone" : "8883332222",
-//         "contactFax" : "",
-//         "contactEmail" : "",
-//         "typeOfBusiness" : "SOLE_PROPRIETORSHIP",
-//         "homeBasedBusiness" : "YES",
-//         "businessDescription" : "",
-//         "businessWebsite" : "",
-//         "tibYears" : 10,
-//         "verificationMethod" : "SECRETARY_OF_STATE",
-//         "verificationMethodComment" : "",
-//         "sic" : "4212"
-//     },
-//     "guarantors": [
-//         {
-//             "firstName" : "Daisy",
-//             "lastName" : "Duck",
-//             "fedId" : "444332222",
-//             "title" : "",
-//             "percentOwnership": 100,
-//             "address1" : "100 Musicians Way",
-//             "address2" : "",
-//             "city" : "Beverly Hills",
-//             "state" : "CA",
-//             "zip" : "90210",
-//             "homePhone" : "2123331256",
-//             "cellPhone" : "",
-//             "contactEmail" : ""
-//         }
-//     ],
-
-//     "ownership" : {
-//         "comments": "if sum of guarantor percent ownership less than 100%, please explain"
-//     },
-
-//     "terms": {
-//         "reqedAmount" : 15000,
-//         "contractTerm" : "60",
-//         "residual" : "EFA",
-//         "programCode" : "code"
-//     },
-
-//     "equipmentList":[
-//         {
-//             "condition" : "REFURBISHED",
-//             "typeOfTransaction" : "VENDOR_SALE",
-//             "equipCode" : "009.012",
-//             "equipDescription" : "",
-//             "equipAddress" : "",
-//             "equipCity" : "",
-//             "equipState" : "",
-//             "equipZip" : "",
-//             "vendorName" : "",
-//             "vendorAddress" : "",
-//             "vendorCity" : "",
-//             "vendorState" : "",
-//             "vendorZip" : ""
-//         }
-//     ]
-// })
-// .then(function (response) {
-//     console.log(response.data);
-// })
-// .catch(function (error) {
-//     console.log(error);
-// });
-
-// axios.post('https://dataimport.finpac.com/st/prequal', 
-// {
-//  "referenceId" : "(optional maxLength: 30) can be used to send your system Id with the application",
-
-// "dealer": {
-//  "username" : "(required) username",
-//  "password" : "(required) password",
-//  "systemId" : "(required) 011111.0010",
-//  "contactName" : "(required, maxLength: 30) IS Group",
-//  "contactPhone" : "(required, maxLength: 14) 2532223333",
-//  "contactEmail" : ["(required, maxLength: 50)person1@finpac.com",
-// "person2@finpac.com"],
-//  "subBrokerName" : "(maxLength: 30)name of sub broker",
-//  "splitTransaction" : "either YES or NO",
-//  "attachments" : "either YES or NO",
-//  "comments" : "(maxLength: 5000)nice to have if available"
-// },
-// "customer": {
-//  "customerName" : "(required, maxLength: 50) Goofy",
-//  "dba" : "(required, maxLength: 30, if typeOfBusiness is sole prop) Goofy's BarnStormer",
-//  "fedId" : "(maxLength: 20)",
-//  "address1" : "(required, maxLength: 50) 1234 Somewhere Street",
-//  "address2" : "(maxLength: 50)",
-//  "city" : "(required, maxLength: 30) Nowhere",
-//  "state" : "(required) CA",
-//  "zip" : "(required, maxLength: 10) 12345",
-//  "billingAddress1" : "(maxLength: 50)1234 Somewhere Street",
-//  "billingAddress2" : "(maxLength: 50)",
-//  "billingCity" : "(maxLength: 30)Nowhere",
-//  "billingState" : "CA",
-//  "billingZip" : "(maxLength: 10)12345",
-//  "contactName" : "(maxLength: 30)Goofy",
-//  "contactPhone" : "(required, maxLength: 15) 8883332222",
-//  "contactFax" : "(maxLength: 30)",
-//  "contactEmail" : "(maxLength: 50)",
-//  "typeOfBusiness" : "(required) either SOLE_PROPRIETORSHIP, PARTNERSHIP,
-//  "homeBasedBusiness" : "either YES, NO",
-//  "businessDescription" : "(maxLength: 5000)",
-//  "businessWebsite" : "(maxLength: 50)",
-//  "tibYears" : "(required, maximum: 99) 10",
-//  "verificationMethod" : "either SECRETARY_OF_STATE, BANK_RATING, D_AND_B,
-
-//  "verificationMethodComment : "(maxLength: 30)if OTHER, explain",
-//  "sic" : "(required) i.e. 4212"
-// },
-
-// "guarantors": [
-// {
-//  "firstName" : "(required, maxLength: 25) Daisy",
-//  "lastName" : "(required, maxLength: 25) Duck",
-//  "fedId" : "(required, maxLength: 20) 444332222",
-//  "title" : "(maxLength: 25)",
-//  "percentOwnership": "(required, maximum 100) 100",
-//  "address1" : "(required, maxLength: 50) 100 Musicians Way",
-//  "address2" : "(maxLength: 50)",
-//  "city" : "(required, maxLength: 25) Beverly Hills",
-//  "state" : "(required) CA",
-//  "zip" : "(required, maxLength: 10) 90210",
-//  "homePhone" : "(maxLength: 15)2123331256",
-//  "cellPhone" : "(maxLength: 15)",
-//  "contactEmail" : "(maxLength: 50)"
-// }
-// ],
-// "ownership" : {
-//  "comments": "(maxLength: 5000)if sum of guarantor percent ownership less than 100%, pleaseexplain"
-// },
-//  "terms": {
-//  "requestedAmount" : "(required) 15000",
-//  "residual" : "either EFA, FMV, 10_PUT, 1.00, 101.00FL, FMV_ONLY_STATE",
-//  "programCode" : "(maxLength: 20)code for one of our pricing programs, if app qualifies"
-//  },
-// "equipmentList":[
-//  {
-//  "condition" : "(required) either NEW, USED, REFURBISHED",
-//  "typeOfTransaction" : "(required) either VENDOR_SALE, PRIVATE_PARTY_SALE,
-//  "equipCode" : "(required) use code from list - i.e. 009.012",
-//  "equipDescription" : "(maxLength: 5000)",
-//  "equipAddress" : "(maxLength: 50)",
-//  "equipCity" : "(maxLength: 30)",
-//  "equipState" : "CA",
-//  "equipZip" : "(maxLength: 10) 90210",
-//  "vendorName" : "(maxLength: 40)",
-//  "vendorAddress" : "(maxLength: 50)",
-//  "vendorCity" : "(maxLength: 30)",
-//  "vendorState" : "CA",
-//  "vendorZip" : "(maxLength: 10) 90210"
-//  }
-// ]
-// })
-// .then(function (response) {
-// 	    console.log(response.data);
-// 	})
-// 	.catch(function (error) {
-// 	    console.log(error);
-// 	});
-// ---------------------------------------------------------------------------
-// Prequal Reponse:
-// NOTE: not all fields are returned with every request. In addition, either rate or
-// yield is returned based on setup. not both.
-// {
-// submissionId : "displays if status not error, application id -i.e. pk-1a"
-// decision : "APPROVED|DECLINED|PASS_ZERO|PASS_VERMONT|PASS_CUTOFF"
-// maxTerm : "maximum term allowed for given sic, in months i.e. 24|36|48|60"
-// rate : "if approved, rate based on supplied info"
-// yield : "if approved, yield based on supplied info"
-// description : "short description for decision reason"
-// status : "ERROR|REJECTED|OK"
-// message : "short description for error"
-// }
-// ---------------------------------------------------------------------------
-// Push-prequal Request, part 2 of 2:
-// {
-//  "dealer": {
-//  "username" : "(required) username",
-//  "password" : "(required) password",
-//  "systemId" : "(required) 011111.0010"
-// },
-//  "application": {
-//  "submissionId" : "ac-123",
-//  "contractTerm" : "(required) either 24, 36, 48, 60"
-//  }
-// }
-// ---------------------------------------------------------------------------
-// July 2019
-// Copyright Financial Pacific Leasing Inc. pg. 8 July 2019
-// Push-prequal Response:
-// NOTE: not all fields are returned with every request.
-// {
-// submissionId : "displays if status not error, application id -i.e. pk-1a"
-// status : "ERROR|OK|VALIDATION_FAILED|AUTH_FAILED"
-// message : "short description for error"
-// }
-// ------------------------------------------------------------------------
-// Example of the most basic Response:
-// The response payload returned from our push-prequal endpoint looks like the following.
-// {
-// "submissionId": "aa-397a",
-// "status": "OK",
-// "decision": "APPROVED"
-// }

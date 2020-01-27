@@ -17,16 +17,15 @@ const bodyParser = require('body-parser');
 
 
 //   createNewAccount(1, 'sdadsad', '232131', '23123120', '2312312')
-// axios.post('https://dataimport.finpac.com/st/prequal', {
+// axios.post('http://localhost:8000/checkApplication', {
 //     "referenceId": "",
-// getUser('huy')
 //     "dealer": {
 //         "username" : "gecap",
 //         "password" : "Johncarp751",
 //         "systemId" : "010841.0010",
 //         "contactName" : "DCR",
 //         "contactPhone" : "2532223333",
-//         "contactEmail" : ["person1@finpac.com", "person2@finpac.com"],
+//         "contactEmail" : "person1@finpac.com",
 //         "subBrokerName" : '',
 //         "splitTransaction" : "NO",
 //         "attachments" : "NO",
@@ -114,23 +113,23 @@ const bodyParser = require('body-parser');
 //         console.log(error);
 //     });
 
-// axios.post( "https://dataimport.finpac.com/st/push-prequal", {
-//     "dealer": {
-//         "username" : "gecap",
-//         "password" : "Johncarp751",
-//         "systemId" : "010841.0010",
-//        },
-//         "application": {
-//             "submissionId" : 'st-3898a',
-//             "contractTerm" : "48"
-//         }
-// })
-//     .then(function (response) {
-//         console.log(response.data);
-//     })
-//     .catch(function (error) {
-//         console.log(error);
-//     });
+axios.post( "http://localhost:8000/submitApplication", {
+    "dealer": {
+        "username" : "gecap",
+        "password" : "Johncarp751",
+        "systemId" : "010841.0010",
+       },
+        "application": {
+            "submissionId" : 'st-3898a',
+            "contractTerm" : "48"
+        }
+})
+    .then(function (response) {
+        console.log(response.data);
+    })
+    .catch(function (error) {
+        console.log(error);
+    });
 
 // axios.post('https://dataimport.finpac.com/st/underwrite', {
 //     "referenceId" : '',
@@ -228,7 +227,5 @@ const bodyParser = require('body-parser');
 //     console.log(error);
 // });
 
-axios.post('http://localhost:8000/auth', {	
-    access_token: 'access-sandbox-77c006c8-b4c1-419a-a8ed-f92f666b3c9f'
-}).then(data=> console.log(data.data.auth.accounts))
-.catch(err=>console.log(err))
+// axios.post('http://localhost:8000/assetReport').then(data=> console.log(data.data.auth.accounts))
+// .catch(err=>console.log(err))

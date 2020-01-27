@@ -48,21 +48,45 @@ const getUser = async(username) => {
   })
 }
 
-const retrieveAccountData = (user_id, institutionId, callback) => {
+const retrieveAccountData = (user_id, accountId, callback) => {
   const findExistingAccount = "SELECT account_id, user_id, accountId FROM dcr.accounts WHERE user_id = ($1) AND accountId = ($2)"
-  pgQuery(findExistingAccount,[user_id, institutionId], (res)=> {
+  pgQuery(findExistingAccount,[user_id, accountId], (res)=> {
     // if (err) console.log(err);
     if (res) callback(res.rows);
   })
 }
 
-const createNewAccount = async (user_id, accessToken, itemId, institutionId, institutionName)=> {
-  const query = 'INSERT INTO dcr.accounts(user_id, accessToken, itemId, accountId, accountName) VALUES($1, $2, $3, $4, $5) RETURNING *'
-  const values = [user_id, accessToken, itemId, institutionId, institutionName]
+const createNewAccount = async (user_id, accountId, accountName)=> {
+  const query = 'INSERT INTO dcr.accounts(user_id, accountId, accountName) VALUES($1, $2, $3) RETURNING *'
+  const values = [user_id, accountId, accountName]
   //Check if entry already exists
-  await retrieveAccountData(user_id, institutionId, async (res)=> {
+  await retrieveAccountData(user_id, accountId, async (res)=> {
     if (res.length > 0) {
       console.error('ERROR: This account already exists')
+    }
+    if (res.length === 0) {
+      await pgQuery(query,values, async (res) => {
+        console.log(res.row)
+      })
+    }
+  })
+}
+
+const retrieveItemData = (user_id, itemId, callback) => {
+  const findExistingItem = "SELECT user_id, itemId, access_token FROM dcr.items WHERE user_id = ($1) AND itemId = ($2)"
+  pgQuery(findExistingItem,[user_id, itemId], (res)=> {
+    // if (err) console.log(err);
+    if (res) callback(res.rows);
+  })
+}
+
+const createNewItem = async (user_id, access_token, itemId)=> {
+  const query = 'INSERT INTO dcr.items(user_id, access_token, itemId) VALUES($1, $2, $3) RETURNING *'
+  const values = [user_id, access_token, itemId]
+  //Check if entry already exists
+  await retrieveAccountData(user_id, itemId, async (res)=> {
+    if (res.length > 0) {
+      console.error('ERROR: This item already exists')
     }
     if (res.length === 0) {
       await pgQuery(query,values, async (res) => {
@@ -77,5 +101,7 @@ module.exports = {
   pgQuery,
   getUser,
   retrieveAccountData,
-  createNewAccount
+  createNewAccount,
+  retrieveItemData,
+  createNewItem
 }

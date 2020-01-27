@@ -19,19 +19,30 @@ const createUserIndexQuery = `
   USING btree
   ( username ASC )
 `
+const createItemTableQuery = `
+  CREATE TABLE IF NOT EXISTS items(
+    user_id INTEGER NOT NULL,
+    access_token VARCHAR (150) NOT NULL,
+    itemId VARCHAR (150) NOT NULL
+  )
+`
+
+const createItemIndexQuery = `
+  CREATE INDEX IF NOT EXISTS itemId ON dcr.items
+  USING btree
+  ( itemId ASC )
+`
 
 const createAccountTableQuery = `
   CREATE TABLE IF NOT EXISTS accounts(
     account_id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
-    accessToken VARCHAR (150) NOT NULL,
-    itemId VARCHAR (150) NOT NULL,
     accountId VARCHAR (150) UNIQUE NOT NULL,
     accountName VARCHAR (150) UNIQUE NOT NULL
   );
 `
 
-//index shoes name for faster lookup
+//index account_id for faster lookup
 const createAccountIndexQuery = `
   CREATE INDEX IF NOT EXISTS account_id ON dcr.accounts
   USING btree
@@ -56,6 +67,8 @@ const connect = async ()=> {
     await client.query(createAccountIndexQuery);
     await client.query(createUserTableQuery);
     await client.query(createUserIndexQuery);
+    await client.query(createItemTableQuery);
+    await client.query(createItemIndexQuery);
     await client.release(); 
     await createFakeUser();
   }
