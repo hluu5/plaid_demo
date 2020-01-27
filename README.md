@@ -48,6 +48,7 @@ npm run start
 - Both has some async handler for their services, they're just different forms of webhooks. 
 - Both has detailed Liabilites Report.
 - Both Plaid and Finicity has some form of Income and Asset report aggregration. Finicity goes an extra step with their own Credit Decisioning service based on the previous 2 reports. DCR may or may not want to depend on this service. The criteria may or may not fit DCR and its partner's criteria. DCR also wants to to consider cost of using this service and compared it to DCR's revenue model to see if it is viable option.
+- Overal, Plaid is a little easier to develop with. But both provides similar products.
 
 3. What's the criteria to determine should an account be approved?
 - Using Plaid, we could pull user's account and transaction info. If that passes certain criteria set by lenders, it could be pre-approved and sent to lender.
