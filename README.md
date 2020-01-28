@@ -52,7 +52,7 @@ npm run start
 
 3. What's the criteria to determine should an account be approved?
 - Using Plaid, we could pull user's account and transaction info. If that passes certain criteria set by lenders, it could be pre-approved and sent to lender.
-- A combination of income, assets and calculation of income as a percentage of monthly payment (including interest) could be computed to determine if an application should be approved. 
+- A combination of income, assets and calculation of monthly payment (including interest) as a percentage of income could be computed to determine if an application should be approved. 
 
 4. According to Financial Pacific Leasing doc, approved application meant that it passed some criteria and the system approved it to be forwarded to the Credit Officer. It doesn't mean it is finalized. So I wonder since DCR's main strength is simple and fast process (within mins), if we have to wait for Credit Officer to approve it, then it wouldn't make sense. My guess is that when the application is in 'Approved' status and sent to the Credit Officer, it's already pre-approved. 
 
