@@ -1,4 +1,4 @@
-const { getUser, retrieveAccountData, createNewAccount, pgQuery } = require('./Postgres/index.js')
+const { getUser, retrieveAccountData, createNewAccount, pgQuery, retrieveAssetReportData } = require('./Postgres/index.js')
 const axios = require("axios");
 const bodyParser = require('body-parser');
 
@@ -29,11 +29,11 @@ axios.post('/income',  {
 .catch(err => console.log(err))
 */
 
-/*
-axios.post('/assetReport')
-.then(data => console.log(data.data))
-.catch(err=>console.log(err))
-*/
+// // /*
+// axios.post('http://localhost:8000/assetReport')
+// .then(data => console.log(data.data))
+// .catch(err=>console.log(err))
+// // */
 
 // 3. After we have income and assets reports, we will extract data from these reports. If this passed certain criterias that were predetermined by DCR and lenders (in this case FinPac), we will send another request to FinPac to determine the max term buyer could apply for and its rate. This could be done with multiple lenders for buyers to compare. Once data is sent back, we will display them on front-end to let buyer decide.
 //     This is done using POST request to '/checkApplication' API.

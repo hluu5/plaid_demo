@@ -8,8 +8,10 @@ const path = require('path');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 const { checkPasswordMiddleware } = require('./middleware.js');
-const { createNewAccount, createNewItem, retrieveItemData } = require('../Postgres/index.js')
+const { createNewAccount, createNewItem, retrieveItemData, 
+	retrieveAssetReportData, createNewAssetReport } = require('../Postgres/index.js')
 dotenv.config();
+const io = require('socket.io');
 
 const PORT = 8000;
 //Need to store access token in data store (in production)
@@ -25,6 +27,7 @@ const client = new plaid.Client(
 
 app.use(bodyParser.urlencoded({ extended: false }))
 app.use(bodyParser.json())
+app.use(cors());
 
 app.get('/', (req, res) => {
 	res.sendFile(path.join(__dirname + '/index.html'));
@@ -63,8 +66,6 @@ app.post('/get_access_token', async (req, res, next) => {
 	});
 });
 
-
-
 app.post('/auth', function (req, res, next) {
 	console.log(req.body.access_token)
 	client.getAuth(req.body.access_token, (error, authResponse) => {
@@ -90,38 +91,58 @@ app.post('/income', (req, res, next) => {
 	})
 })
 
-app.post('/assetReport', (req, res, next) => {
-	const daysRequested = 10;
+app.post('/assetReport', async (req, res, next) => {
+	const days_requested = 10;
 
 	// ACCESS_TOKENS is an array of Item access tokens.
 	// Note that the assets product must be enabled for all Items.
 	// All fields on the options object are optional.
-	const ACCESS_TOKENS = ['access-sandbox-1ebd7b9a-b842-4fe4-add6-c9c0b800a5d6', 'access-sandbox-5a14d090-9aea-41ce-9025-f2aa218a8e0f'];
-	client.createAssetReport(ACCESS_TOKENS, daysRequested,
-		(error, createResponse) => {
-			if (error != null) {
-				console.log(error)
-			}
+	const access_tokens = ['access-sandbox-6c85fedd-db91-49af-8d6b-d25e9e5899f8'];
+	const client_id = process.env.PLAID_CLIENT_ID;
+	const secret = process.env.PLAID_SECRET_SANDBOX;
+	const options = {
+		client_report_id: '123',
+		webhook: 'http://b727e487.ngrok.io/webhook',
+		user: {
+			client_user_id: '789',
+			first_name: 'Jane',
+			middle_name: 'Leah',
+			last_name: 'Doe',
+			ssn: '123-45-6789',
+			phone_number: '(555) 123-4567',
+			email: 'jane.doe@example.com',
+		},
+	};
 
-			const assetReportId = createResponse.asset_report_id;
-			const assetReportToken = createResponse.asset_report_token;
-			//console.log(assetReportToken)
-			client.getAssetReport(assetReportToken, false, (error, getResponse) => {
-				if (error != null) {
-					if (error.status_code === 400 &&
-						error.error_code === 'PRODUCT_NOT_READY') {
-						// Asset report is not ready yet. Try again later.
-						console.log(error)
-					} else {
-						// Handle error.
-						console.log(error)
-					}
-				}
+	let assetReportId = null;
+	let assetReportToken = null;
 
-				// const report = getResponse.report;
-				console.log(getResponse)
-			});
-		});
+	axios.post('https://sandbox.plaid.com/asset_report/create', {
+		days_requested,
+		options,
+		access_tokens,
+		client_id,
+		secret
+	})
+	.then(data => {
+		createNewAssetReport(data.data.asset_report_id, data.data.asset_report_token, data.data.request_id)
+	})
+	.catch(err => console.log(err))
+})
+
+app.post('/webhook', (req, res) => {
+	const client_id = process.env.PLAID_CLIENT_ID;
+	const secret = process.env.PLAID_SECRET_SANDBOX;
+	// console.log(req.body.asset_report_id)
+	retrieveAssetReportData(req.body.asset_report_id, (token)=>{
+		axios.post('https://sandbox.plaid.com/asset_report/get', {
+			client_id,
+			secret,
+			asset_report_token: token[0].asset_report_token
+		}).then(data=> console.log(data.data.report.items[0].accounts))
+		.catch(err=>console.log(err.response.data))
+		res.send('ok')
+	})
 })
 
 app.post('/checkApplication', (req, res) => {
@@ -151,7 +172,7 @@ app.post('/checkApplication', (req, res) => {
 			"address1": req.body.customer.address1,
 			"address2": "",
 			"city": req.body.customer.city,
-			"state":req.body.customer.state,
+			"state": req.body.customer.state,
 			"zip": req.body.customer.zip,
 			"billingAddress1": req.body.customer.billingAddress1,
 			"billingAddress2": "",
@@ -218,15 +239,15 @@ app.post('/checkApplication', (req, res) => {
 			}
 		]
 	})
-	.then(function (response) {
-		res.json(response.data);
-	})
-	.catch(function (error) {
-		console.log(error);
-	});
+		.then(function (response) {
+			res.json(response.data);
+		})
+		.catch(function (error) {
+			console.log(error);
+		});
 })
 
-app.post('/submitApplication', (req,res) => {
+app.post('/submitApplication', (req, res) => {
 	// Assume the buyer chose the term he wanted and DCR proceed to submit the final application to lender (FinPac).
 	axios.post("https://dataimport.finpac.com/st/push-prequal", {
 		"dealer": {
@@ -235,16 +256,16 @@ app.post('/submitApplication', (req,res) => {
 			"systemId": req.body.dealer.systemId,
 		},
 		"application": {
-			"submissionId":  req.body.application.submissionId,
-			"contractTerm":  req.body.application.contractTerm
+			"submissionId": req.body.application.submissionId,
+			"contractTerm": req.body.application.contractTerm
 		}
 	})
-	.then(function (response) {
-		res.json(response.data);
-	})
-	.catch(function (error) {
-		console.log(error);
-	});
+		.then(function (response) {
+			res.json(response.data);
+		})
+		.catch(function (error) {
+			console.log(error);
+		});
 })
 
 app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));

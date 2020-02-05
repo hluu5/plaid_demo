@@ -96,6 +96,29 @@ const createNewItem = async (user_id, access_token, itemId)=> {
   })
 }
 
+const retrieveAssetReportData = (asset_report_id, callback) => {
+  const findExistingAssetReport = "SELECT asset_report_id, asset_report_token, request_id FROM dcr.asset_reports WHERE asset_report_id = ($1)"
+  pgQuery(findExistingAssetReport,[asset_report_id], (res)=> {
+    if (res) callback(res.rows);
+  })
+}
+
+const createNewAssetReport = async (asset_report_id, asset_report_token, request_id)=> {
+  const query = 'INSERT INTO dcr.asset_reports(asset_report_id, asset_report_token, request_id) VALUES($1, $2, $3) RETURNING *'
+  const values = [asset_report_id, asset_report_token, request_id]
+  //Check if entry already exists
+  await retrieveAssetReportData(asset_report_id, async (res)=> {
+    if (res.length > 0) {
+      console.error('ERROR: This asset report already exists')
+    }
+    if (res.length === 0) {
+      await pgQuery(query,values, async (res) => {
+        console.log(res.row)
+      })
+    }
+  })
+}
+
 module.exports = {
   pool,
   pgQuery,
@@ -103,5 +126,7 @@ module.exports = {
   retrieveAccountData,
   createNewAccount,
   retrieveItemData,
-  createNewItem
+  createNewItem,
+  retrieveAssetReportData,
+  createNewAssetReport
 }

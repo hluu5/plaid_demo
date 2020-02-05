@@ -49,6 +49,23 @@ const createAccountIndexQuery = `
   ( account_id ASC )
 `
 
+//create asset report table
+const createAssetReportTableQuery = `
+  CREATE TABLE IF NOT EXISTS asset_reports(
+    id SERIAL PRIMARY KEY,
+    asset_report_id VARCHAR (150) UNIQUE NOT NULL,
+    asset_report_token VARCHAR (150) UNIQUE NOT NULL,
+    request_id VARCHAR (150) UNIQUE NOT NULL
+  );
+`
+
+//index asset_report_id for faster lookup
+const createAssetReportIndexQuery = `
+  CREATE INDEX IF NOT EXISTS asset_report_id ON dcr.asset_reports
+  USING btree
+  ( asset_report_id ASC )
+`
+
 //create a fake user:
 const createFakeUser = async ()=> {
   const query = 'INSERT INTO dcr.users(username, password) VALUES($1, $2) RETURNING *'
@@ -69,6 +86,8 @@ const connect = async ()=> {
     await client.query(createUserIndexQuery);
     await client.query(createItemTableQuery);
     await client.query(createItemIndexQuery);
+    await client.query(createAssetReportTableQuery);
+    await client.query(createAssetReportIndexQuery);
     await client.release(); 
     await createFakeUser();
   }
