@@ -7,16 +7,14 @@ const cors = require('cors');
 const path = require('path');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
+const http = require("http").createServer(app);
+const io = require("socket.io")(http);
 const { checkPasswordMiddleware } = require('./middleware.js');
-const { createNewAccount, createNewItem, retrieveItemData, 
+const { createNewAccount, createNewItem, retrieveItemData,
 	retrieveAssetReportData, createNewAssetReport } = require('../Postgres/index.js')
 dotenv.config();
-const io = require('socket.io');
 
 const PORT = 8000;
-//Need to store access token in data store (in production)
-let ACCESS_TOKEN = null;
-let PUBLIC_TOKEN = null;
 
 const client = new plaid.Client(
 	process.env.PLAID_CLIENT_ID,
@@ -32,9 +30,6 @@ app.use(cors());
 app.get('/', (req, res) => {
 	res.sendFile(path.join(__dirname + '/index.html'));
 })
-
-// const fake_username = 'huy';
-// const fake_password = 'password';
 
 //Check Password and Username before generate and exchange tokens)
 app.post('/get_access_token', checkPasswordMiddleware);
@@ -114,9 +109,7 @@ app.post('/assetReport', async (req, res, next) => {
 		},
 	};
 
-	let assetReportId = null;
-	let assetReportToken = null;
-
+	//make a request to Plaid to create asset report. Save asset report token to db.
 	axios.post('https://sandbox.plaid.com/asset_report/create', {
 		days_requested,
 		options,
@@ -124,23 +117,37 @@ app.post('/assetReport', async (req, res, next) => {
 		client_id,
 		secret
 	})
-	.then(data => {
-		createNewAssetReport(data.data.asset_report_id, data.data.asset_report_token, data.data.request_id)
+		.then(data => {
+			//save asset report token to db.
+			createNewAssetReport(data.data.asset_report_id, data.data.asset_report_token, data.data.request_id)
+			res.send('Report is created')
+		})
+		.catch(err => console.log(err))
+})
+
+const reportChannel = io.of('/report');
+reportChannel.on('connection', (socket) => {
+	socket.on('joinRoom', (roomName)=>{
+		socket.join(roomName)
+		console.log('Joined room', roomName)
 	})
-	.catch(err => console.log(err))
 })
 
 app.post('/webhook', (req, res) => {
 	const client_id = process.env.PLAID_CLIENT_ID;
 	const secret = process.env.PLAID_SECRET_SANDBOX;
-	// console.log(req.body.asset_report_id)
-	retrieveAssetReportData(req.body.asset_report_id, (token)=>{
+
+	retrieveAssetReportData(req.body.asset_report_id, (token) => {
 		axios.post('https://sandbox.plaid.com/asset_report/get', {
 			client_id,
 			secret,
 			asset_report_token: token[0].asset_report_token
-		}).then(data=> console.log(data.data.report.items[0].accounts))
-		.catch(err=>console.log(err.response.data))
+		}).then(data => {
+			reportChannel
+			.to('huy')
+			.emit('receiveReport',data.data.report.items)	
+		})
+		  .catch(err => console.log(err.response.data))
 		res.send('ok')
 	})
 })
@@ -268,6 +275,6 @@ app.post('/submitApplication', (req, res) => {
 		});
 })
 
-app.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
+http.listen(PORT, () => console.log(`Server is running on port ${PORT}`));
 
 
