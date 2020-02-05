@@ -16,7 +16,8 @@ npm run createdb
 - DCR Postgres schema 
 - users table, indexed by username,
 - item table, indexed by itemId
-- account table, indexed by account_id
+- account table, indexed by account_id,
+- asset report table, indexed by asset_report_id
 - a fake user with hashed password using bcrypt
 
 #run API server:
